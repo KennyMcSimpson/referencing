@@ -262,7 +262,7 @@ class Resource(Generic[D]):
 
         contents = self.contents
         segments: list[int | str] = []
-        for segment in unquote(pointer[1:]).split("/"):
+        for segment in unquote(pointer)[1:].split("/"):
             if isinstance(contents, Sequence):
                 segment = int(segment)
             else:
@@ -680,12 +680,13 @@ class Resolver(Generic[D]):
         except exceptions.Unretrievable as error:
             raise exceptions.Unresolvable(ref=ref) from error
 
-        if fragment.startswith("/"):
+        decoded_fragment = unquote(fragment)
+        if decoded_fragment.startswith("/"):
             resolver = self._evolve(registry=retrieved.registry, base_uri=uri)
             return retrieved.value.pointer(pointer=fragment, resolver=resolver)
 
         if fragment:
-            retrieved = retrieved.registry.anchor(uri, fragment)
+            retrieved = retrieved.registry.anchor(uri, decoded_fragment)
             resolver = self._evolve(registry=retrieved.registry, base_uri=uri)
             return retrieved.value.resolve(resolver=resolver)
 

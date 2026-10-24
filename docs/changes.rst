@@ -2,6 +2,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+* Resolve percent-encoded anchors and JSON Pointer fragments whose initial slash is percent-encoded.
+
 v0.37.0
 -------
 

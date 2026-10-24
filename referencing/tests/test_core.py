@@ -732,6 +732,35 @@ class TestResolver:
         resolved = resolver.lookup("urn:example#foo")
         assert resolved.contents == 12
 
+    @pytest.mark.parametrize("ref", ["#%66oo", "urn:example#%66oo"])
+    def test_lookup_percent_encoded_anchor(self, ref):
+        resource = DRAFT202012.create_resource({"$anchor": "foo"})
+        registry = Registry().with_resource("urn:example", resource)
+        resolver = registry.resolver("urn:example")
+        assert resolver.lookup(ref).contents == resource.contents
+
+    def test_lookup_percent_encoded_anchor_is_decoded_once(self):
+        resource = ID_AND_CHILDREN.create_resource(
+            {"anchors": {"%2Ffoo": 12}},
+        )
+        resolver = Registry().resolver_with_root(resource)
+        assert resolver.lookup("#%252Ffoo").contents == 12
+
+    @pytest.mark.parametrize(
+        "ref",
+        [
+            "#%2Ffoo%252Fbar",
+            "#%2ffoo%252Fbar",
+            "urn:example#%2Ffoo%252Fbar",
+            "#/foo%252Fbar",
+        ],
+    )
+    def test_lookup_percent_encoded_pointer(self, ref):
+        resource = Resource.opaque({"foo%2Fbar": 12, "foo/bar": 34})
+        registry = Registry().with_resource("urn:example", resource)
+        resolver = registry.resolver("urn:example")
+        assert resolver.lookup(ref).contents == 12
+
     def test_lookup_unknown_reference(self):
         resolver = Registry().resolver()
         ref = "http://example.com/does/not/exist"
@@ -759,6 +788,16 @@ class TestResolver:
             resolver.lookup(ref)
         assert e.value == exceptions.PointerToNowhere(
             ref="/10",
+            resource=resource,
+        )
+
+    def test_lookup_non_existent_percent_encoded_pointer(self):
+        resource = Resource.opaque({})
+        resolver = Registry().resolver_with_root(resource)
+        with pytest.raises(exceptions.PointerToNowhere) as e:
+            resolver.lookup("#%2Fmissing")
+        assert e.value == exceptions.PointerToNowhere(
+            ref="%2Fmissing",
             resource=resource,
         )
 
